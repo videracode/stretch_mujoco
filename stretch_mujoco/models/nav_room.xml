@@ -1,0 +1,36 @@
+<mujoco model="stretch nav room">
+  <include file="stretch.xml"/>
+
+  <statistic center="0 0 .75" extent="3" meansize="0.05"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <global azimuth="-90" elevation="-60"/>
+  </visual>
+
+  <asset>
+    <material name="floor" rgba=".15 .15 .15 1"/>
+    <material name="wall" rgba=".75 .75 .72 1"/>
+    <material name="obstacle" rgba=".55 .35 .2 1"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 3" dir="0 0 -1" directional="true"/>
+    <geom name="floor" size="0 0 0.05" type="plane" material="floor"/>
+
+    <!-- outer walls: interior x -3..3, y -2.5..2.5 -->
+    <geom name="wall_north" type="box" pos="0 2.55 0.5"  size="3.1 0.05 0.5" material="wall"/>
+    <geom name="wall_south" type="box" pos="0 -2.55 0.5" size="3.1 0.05 0.5" material="wall"/>
+    <geom name="wall_east"  type="box" pos="3.05 0 0.5"  size="0.05 2.5 0.5" material="wall"/>
+    <geom name="wall_west"  type="box" pos="-3.05 0 0.5" size="0.05 2.5 0.5" material="wall"/>
+
+    <!-- divider at x=1 with a 1 m doorway between y=0.5 and y=1.5 -->
+    <geom name="divider_a" type="box" pos="1 -1 0.5" size="0.05 1.5 0.5" material="wall"/>
+    <geom name="divider_b" type="box" pos="1 2 0.5"  size="0.05 0.5 0.5" material="wall"/>
+
+    <!-- obstacles -->
+    <geom name="table"  type="box"      pos="-1.5 1.6 0.37"  size="0.6 0.4 0.37" material="obstacle"/>
+    <geom name="pillar" type="cylinder" pos="-1.5 -1.2 0.5"  size="0.2 0.5"      material="obstacle"/>
+    <geom name="box"    type="box"      pos="2.1 -1.5 0.3"   size="0.3 0.3 0.3"  material="obstacle"/>
+  </worldbody>
+</mujoco>

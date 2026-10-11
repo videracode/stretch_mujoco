@@ -520,8 +520,32 @@ class MujocoServer:
                 and self.mjmodel.body(self.mjmodel.jnt_bodyid[j]).name != "base_link"
             ]
         new_status.objects = {name: self.mjdata.xpos[b].tolist() for name, b in self._free_bodies}
+        new_status.contacts = self._gripper_contacts()
 
         self.data_proxies.set_status(new_status)
+
+    def _gripper_contacts(self) -> list:
+        """Contacts touching the gripper (bodies below link_gripper_slider), with normal force."""
+        m, d = self.mjmodel, self.mjdata
+        if not hasattr(self, "_gripper_bodies"):
+            root = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "link_gripper_slider")
+            self._gripper_bodies = set()
+            for b in range(m.nbody):
+                p = b
+                while p > 0 and p != root:
+                    p = m.body_parentid[p]
+                if p == root and root >= 0:
+                    self._gripper_bodies.add(b)
+        out, force = [], np.zeros(6)
+        for i in range(d.ncon):
+            c = d.contact[i]
+            b1, b2 = m.geom_bodyid[c.geom1], m.geom_bodyid[c.geom2]
+            if (b1 in self._gripper_bodies) == (b2 in self._gripper_bodies):
+                continue
+            g, o = (b1, b2) if b1 in self._gripper_bodies else (b2, b1)
+            mujoco.mj_contactForce(m, d, i, force)
+            out.append([m.body(g).name, m.body(o).name, [round(float(v), 4) for v in c.pos], round(float(force[0]), 2)])
+        return out
 
     def _to_real_gripper_range(self, pos: float) -> float:
         """
@@ -533,14 +557,24 @@ class MujocoServer:
             config.robot_settings["gripper_min_max"],
         )
 
+    def _is_new(self, key: tuple, command) -> bool:
+        """True once per command: commands are identified by their seq, not by a trigger flag."""
+        if not command.trigger:
+            return False
+        if not hasattr(self, "_done_seq"):
+            self._done_seq = {}
+        if self._done_seq.get(key) == command.seq:
+            return False
+        self._done_seq[key] = command.seq
+        return True
+
     def push_command(self, command_status:StatusCommand):
         """
         Handles setting mujoco ctrl properties to move joints.
         """
         # move_by
         for _, command in command_status.move_by.items():
-            if command.trigger:
-                command.trigger = False
+            if self._is_new(("move_by", command.actuator_name), command):
                 actuator_name = command.actuator_name
                 pos = command.pos
                 if actuator_name in (Actuators.base_translate.name, Actuators.base_rotate.name):
@@ -559,8 +593,7 @@ class MujocoServer:
 
         # move_to
         for _, command in command_status.move_to.items():
-            if command.trigger:
-                command.trigger = False
+            if self._is_new(("move_to", command.actuator_name), command):
                 actuator_name = command.actuator_name
                 pos = command.pos
                 if actuator_name == Actuators.gripper.name:
@@ -573,18 +606,16 @@ class MujocoServer:
                     self.mjdata.actuator(actuator_name).ctrl = pos
 
         # set_base_velocity
-        if command_status.base_velocity is not None and command_status.base_velocity.trigger:
-            command_status.base_velocity.trigger = False
+        if command_status.base_velocity is not None and self._is_new(("base_velocity",), command_status.base_velocity):
             self.base_controller.push_command(command_status.base_velocity)
 
         # keyframe
-        if command_status.keyframe is not None and command_status.keyframe.trigger:
-            command_status.keyframe.trigger = False
+        if command_status.keyframe is not None and self._is_new(("keyframe",), command_status.keyframe):
             self.mjdata.ctrl = self.mjmodel.keyframe(command_status.keyframe.name).ctrl
 
         self.base_controller.update()
-
-        self.data_proxies.set_command(command_status)
+        # The command object is not written back: the client may have sent a newer command since
+        # it was read, and writing this stale copy back would silently drop it.
 
     def _to_sim_gripper_range(self, pos: float) -> float:
         """

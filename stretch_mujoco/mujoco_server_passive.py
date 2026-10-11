@@ -124,10 +124,8 @@ class MujocoServerPassive(MujocoServer):
         command_arrows = command_status.coordinate_frame_arrows_viz.copy()
 
         for arrows in command_arrows:
-            if arrows.trigger:
+            if self._is_new(("arrows", arrows.seq), arrows):
                 self._add_axes_to_user_scn(self.viewer.user_scn, np.array(arrows.position) , arrows.rotation)
-
-                command_status.coordinate_frame_arrows_viz.remove(arrows)
 
         super().push_command(command_status)
 

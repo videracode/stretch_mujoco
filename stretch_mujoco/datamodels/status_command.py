@@ -3,10 +3,22 @@ Dataclasses that communicate movement commands to Mujoco.
 """
 
 import copy
+import itertools
+import os
+import time
 from dataclasses import asdict, dataclass, field
 
 from stretch_mujoco.enums.actuators import Actuators
 from stretch_mujoco.utils import dataclass_from_dict
+
+
+_counter = itertools.count(1)
+
+
+def next_seq() -> int:
+    """A unique id per command. The server executes each id once and never writes the shared
+    command object back, so a command sent while the server is mid-step cannot be overwritten."""
+    return (time.time_ns() // 1000) * 1_000_000 + (os.getpid() % 1000) * 1000 + next(_counter) % 1000
 
 
 @dataclass
@@ -14,6 +26,7 @@ class CommandMove:
     actuator_name: str
     trigger: bool
     pos: float
+    seq: int = 0
 
 
 @dataclass
@@ -21,12 +34,14 @@ class CommandBaseVelocity:
     v_linear: float
     omega: float
     trigger: bool
+    seq: int = 0
 
 
 @dataclass
 class CommandKeyframe:
     name: str
     trigger: bool
+    seq: int = 0
 
 
 @dataclass
@@ -34,6 +49,7 @@ class CommandCoordinateFrameArrowsViz:
     position: tuple[float, float, float]
     rotation: tuple[float, float, float]
     trigger: bool
+    seq: int = 0
 
 
 @dataclass

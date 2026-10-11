@@ -26,6 +26,7 @@ from stretch_mujoco.datamodels.status_command import (
     CommandKeyframe,
     CommandMove,
     StatusCommand,
+    next_seq,
 )
 import stretch_mujoco.utils as utils
 from stretch_mujoco.utils import require_connection, block_until_check_succeeds
@@ -216,7 +217,7 @@ class StretchMujocoSimulator:
         """
         with self._command_lock:
             self.data_proxies.set_command(
-                StatusCommand(keyframe=CommandKeyframe(name="home", trigger=True))
+                StatusCommand(keyframe=CommandKeyframe(name="home", trigger=True, seq=next_seq()))
             )
         self.wait_while_is_moving(Actuators.lift)
 
@@ -227,7 +228,7 @@ class StretchMujocoSimulator:
         """
         with self._command_lock:
             self.data_proxies.set_command(
-                StatusCommand(keyframe=CommandKeyframe(name="stow", trigger=True))
+                StatusCommand(keyframe=CommandKeyframe(name="stow", trigger=True, seq=next_seq()))
             )
 
         self.wait_while_is_moving(Actuators.wrist_pitch)
@@ -382,7 +383,7 @@ class StretchMujocoSimulator:
 
         with self._command_lock:
             command = self.data_proxies.get_command()
-            command.set_move_to(CommandMove(actuator_name=actuator.name, pos=pos, trigger=True))
+            command.set_move_to(CommandMove(actuator_name=actuator.name, pos=pos, trigger=True, seq=next_seq()))
 
             self.data_proxies.set_command(command)
 
@@ -413,7 +414,7 @@ class StretchMujocoSimulator:
 
             command.set_move_by(
                 # We set the pos here, and not new_position, because this relative motion math is handled by mujoco_server:
-                CommandMove(actuator_name=actuator.name, pos=pos, trigger=True)
+                CommandMove(actuator_name=actuator.name, pos=pos, trigger=True, seq=next_seq())
             )
 
             self.data_proxies.set_command(command)
@@ -430,7 +431,7 @@ class StretchMujocoSimulator:
         with self._command_lock:
             command = self.data_proxies.get_command()
             command.set_base_velocity(
-                CommandBaseVelocity(v_linear=v_linear, omega=omega, trigger=True)
+                CommandBaseVelocity(v_linear=v_linear, omega=omega, trigger=True, seq=next_seq())
             )
 
             self.data_proxies.set_command(command)
@@ -450,7 +451,7 @@ class StretchMujocoSimulator:
         with self._command_lock:
             command = self.data_proxies.get_command()
             command.coordinate_frame_arrows_viz.append(
-                CommandCoordinateFrameArrowsViz(position=position, rotation=rotation, trigger=True)
+                CommandCoordinateFrameArrowsViz(position=position, rotation=rotation, trigger=True, seq=next_seq())
             )
             self.data_proxies.set_command(command)
 

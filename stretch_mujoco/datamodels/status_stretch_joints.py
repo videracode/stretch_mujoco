@@ -39,6 +39,9 @@ class StatusStretchJoints:
     gripper: PositionVelocity
     objects: dict = field(default_factory=dict)
     """World xyz of each free-moving non-robot body, by name. Ground truth: for scoring only."""
+    contacts: list = field(default_factory=list)
+    """Contacts between gripper bodies and anything else: [gripper body, other body, xyz, normal force N].
+    Diagnostics only."""
 
     def __getitem__(self, name:str):
         """For backward compatibility: allows access with the square brackets []"""

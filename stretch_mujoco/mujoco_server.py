@@ -512,6 +512,15 @@ class MujocoServer:
             new_status.base.theta,
         ) = self.base_controller.get_base_pose()
 
+        if not hasattr(self, "_free_bodies"):
+            self._free_bodies = [
+                (self.mjmodel.body(self.mjmodel.jnt_bodyid[j]).name, self.mjmodel.jnt_bodyid[j])
+                for j in range(self.mjmodel.njnt)
+                if self.mjmodel.jnt_type[j] == mujoco.mjtJoint.mjJNT_FREE
+                and self.mjmodel.body(self.mjmodel.jnt_bodyid[j]).name != "base_link"
+            ]
+        new_status.objects = {name: self.mjdata.xpos[b].tolist() for name, b in self._free_bodies}
+
         self.data_proxies.set_status(new_status)
 
     def _to_real_gripper_range(self, pos: float) -> float:
